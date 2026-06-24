@@ -48,7 +48,7 @@ extension ToolExecutor {
     }
 
     private static func momentJSON(_ name: String, _ m: DomainPack.Moment) -> [String: Any] {
-        [
+        var out: [String: Any] = [
             "momentType": name,
             "category": m.category,
             "importance": m.importance,
@@ -57,6 +57,8 @@ extension ToolExecutor {
             "avoidQualities": m.avoidQualities,
             "cues": m.classificationCues,
         ]
+        if let dur = m.typicalDurationSec { out["typicalDurationSec"] = dur }
+        return out
     }
 
     // MARK: - classify_moments

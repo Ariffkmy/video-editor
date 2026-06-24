@@ -1,43 +1,43 @@
 {
-  "_note": "Derived from AI-reference by scripts/build_domain_pack.py. Heuristic ordering/importance — review and edit by hand.",
+  "_note": "Derived from AI-reference by scripts/build_domain_pack.py. Audio/order/duration come from vision-verified records where available, else category heuristics. Editable by hand.",
   "audioPatterns": "traditional music during pelamin, silent/reverent during akad, upbeats for reception",
   "ceremonies": {
     "nikah": [
-      "couple_portrait",
-      "venue_establishing",
       "decor_detail",
+      "venue_establishing",
+      "couple_portrait",
       "bride_prep",
       "groom_prep",
       "hantaran_detail",
-      "akad_nikah",
       "ring_exchange",
+      "akad_nikah",
+      "guest_reaction",
       "salam_family",
-      "family_portrait",
-      "guest_reaction"
+      "family_portrait"
     ],
     "reception": [
-      "couple_portrait",
-      "venue_establishing",
       "decor_detail",
+      "venue_establishing",
+      "couple_portrait",
+      "guest_reaction",
       "salam_family",
       "family_portrait",
-      "guest_reaction",
       "reception",
       "pelamin",
-      "exit_or_closing",
-      "makan_beradab"
+      "makan_beradab",
+      "exit_or_closing"
     ],
     "tunang": [
-      "couple_portrait",
-      "venue_establishing",
       "decor_detail",
+      "venue_establishing",
+      "couple_portrait",
       "bride_prep",
       "groom_prep",
       "hantaran_detail",
       "ring_exchange",
+      "guest_reaction",
       "salam_family",
-      "family_portrait",
-      "guest_reaction"
+      "family_portrait"
     ]
   },
   "confidenceMin": 0.8,
@@ -59,7 +59,8 @@
         "stable_camera",
         "medium_shot"
       ],
-      "referenceCount": 191
+      "referenceCount": 191,
+      "typicalDurationSec": 49
     },
     "bride_prep": {
       "audioPolicy": "ambient",
@@ -76,7 +77,8 @@
         "stable_camera",
         "medium_shot"
       ],
-      "referenceCount": 52
+      "referenceCount": 52,
+      "typicalDurationSec": 31
     },
     "couple_portrait": {
       "audioPolicy": "music-bed-ok",
@@ -93,7 +95,8 @@
         "stable_camera",
         "medium_shot"
       ],
-      "referenceCount": 148
+      "referenceCount": 148,
+      "typicalDurationSec": 21
     },
     "decor_detail": {
       "audioPolicy": "music-bed-ok",
@@ -110,7 +113,8 @@
         "stable_camera",
         "medium_shot"
       ],
-      "referenceCount": 25
+      "referenceCount": 25,
+      "typicalDurationSec": 1
     },
     "exit_or_closing": {
       "audioPolicy": "music-bed-ok",
@@ -127,10 +131,11 @@
         "stable_camera",
         "cinematic"
       ],
-      "referenceCount": 24
+      "referenceCount": 24,
+      "typicalDurationSec": 25
     },
     "family_portrait": {
-      "audioPolicy": "ambient",
+      "audioPolicy": "music-bed-ok",
       "avoidQualities": [
         "crowd_blocking",
         "backlit_faces",
@@ -144,7 +149,8 @@
         "stable_camera",
         "cinematic"
       ],
-      "referenceCount": 38
+      "referenceCount": 38,
+      "typicalDurationSec": 31
     },
     "groom_prep": {
       "audioPolicy": "ambient",
@@ -161,7 +167,8 @@
         "stable_camera",
         "medium_shot"
       ],
-      "referenceCount": 34
+      "referenceCount": 34,
+      "typicalDurationSec": 20
     },
     "guest_reaction": {
       "audioPolicy": "ambient",
@@ -178,10 +185,11 @@
         "stable_camera",
         "medium_shot"
       ],
-      "referenceCount": 35
+      "referenceCount": 35,
+      "typicalDurationSec": 5
     },
     "hantaran_detail": {
-      "audioPolicy": "ambient",
+      "audioPolicy": "music-bed-ok",
       "avoidQualities": [
         "blurry",
         "soft_focus",
@@ -195,10 +203,11 @@
         "stable_camera",
         "medium_shot"
       ],
-      "referenceCount": 17
+      "referenceCount": 17,
+      "typicalDurationSec": 40
     },
     "makan_beradab": {
-      "audioPolicy": "music-bed-ok",
+      "audioPolicy": "feature-original",
       "avoidQualities": [
         "blurry",
         "soft_focus",
@@ -212,7 +221,8 @@
         "clear_faces",
         "medium_shot"
       ],
-      "referenceCount": 9
+      "referenceCount": 9,
+      "typicalDurationSec": 60
     },
     "pelamin": {
       "audioPolicy": "music-bed-ok",
@@ -229,10 +239,11 @@
         "stable_camera",
         "medium_shot"
       ],
-      "referenceCount": 82
+      "referenceCount": 82,
+      "typicalDurationSec": 34
     },
     "reception": {
-      "audioPolicy": "music-bed-ok",
+      "audioPolicy": "ambient",
       "avoidQualities": [
         "blurry",
         "soft_focus",
@@ -246,7 +257,8 @@
         "stable_camera",
         "medium_shot"
       ],
-      "referenceCount": 124
+      "referenceCount": 124,
+      "typicalDurationSec": 58
     },
     "ring_exchange": {
       "audioPolicy": "feature-original",
@@ -263,10 +275,11 @@
         "stable_camera",
         "medium_shot"
       ],
-      "referenceCount": 35
+      "referenceCount": 35,
+      "typicalDurationSec": 10
     },
     "salam_family": {
-      "audioPolicy": "feature-original",
+      "audioPolicy": "ambient",
       "avoidQualities": [
         "blurry",
         "soft_focus",
@@ -280,7 +293,8 @@
         "stable_camera",
         "medium_shot"
       ],
-      "referenceCount": 57
+      "referenceCount": 57,
+      "typicalDurationSec": 40
     },
     "venue_establishing": {
       "audioPolicy": "music-bed-ok",
@@ -297,7 +311,8 @@
         "clear_faces",
         "medium_shot"
       ],
-      "referenceCount": 82
+      "referenceCount": 82,
+      "typicalDurationSec": 21
     }
   },
   "recordsKept": 608,

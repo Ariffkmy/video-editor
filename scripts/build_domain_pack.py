@@ -3,17 +3,19 @@
 
 Reads AI-reference/references_malay_wedding.jsonl + taxonomy_malay_wedding.json and
 derives, per moment type: importance, audio policy, preferred/avoid shot qualities, a
-short classification cue, and per-ceremony ordered moment slots.
+short classification cue, typical clip length, and per-ceremony ordered moment slots.
 
-The output is HEURISTIC (the dataset has no explicit ordering or must-have judgment) and
-is meant to be reviewed/edited by hand afterwards. Re-runnable and deterministic.
+The vision-verified records carry audioImportance, momentSequenceHint and timecodes;
+those drive audio policy, ordering, and typical duration directly. Category heuristics
+are only a fallback for moments without that data. Re-runnable and deterministic.
 
     python scripts/build_domain_pack.py
 """
 from __future__ import annotations
 
 import json
-from collections import Counter
+import statistics
+from collections import Counter, defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -33,6 +35,14 @@ CATEGORY_AUDIO = {
     "celebration": "music-bed-ok",
     "scene": "music-bed-ok",
 }
+# Vision-verified audioImportance (in the rich records) -> our audioPolicy vocabulary.
+# This is preferred over the category heuristic below whenever the data has it.
+AUDIO_IMPORTANCE_TO_POLICY = {
+    "crucial": "feature-original",
+    "replaceable": "music-bed-ok",
+    "ambient": "ambient",
+}
+
 # Per-moment overrides where the category default is wrong.
 MOMENT_AUDIO = {
     "family_portrait": "ambient",   # posed photo, no crucial speech
@@ -120,6 +130,32 @@ def build() -> dict:
     categories: dict[str, list[str]] = taxonomy.get("momentCategories", {})
     preferred_composition = taxonomy.get("preferredComposition", "")
 
+    # Vision-verified per-segment records (have a primaryMoment + audioImportance +
+    # momentSequenceHint + timecodes). Attribute those signals to the primaryMoment.
+    rich_by_moment: dict[str, list[dict]] = defaultdict(list)
+    for r in records:
+        pm = r.get("primaryMoment")
+        if pm and "audioImportance" in r:
+            rich_by_moment[pm].append(r)
+
+    def data_audio_policy(moment: str) -> str | None:
+        vals = [x["audioImportance"] for x in rich_by_moment.get(moment, []) if x.get("audioImportance")]
+        if not vals:
+            return None
+        return AUDIO_IMPORTANCE_TO_POLICY.get(Counter(vals).most_common(1)[0][0])
+
+    def data_seq_hint(moment: str) -> float | None:
+        seqs = [x["momentSequenceHint"] for x in rich_by_moment.get(moment, []) if x.get("momentSequenceHint") is not None]
+        return statistics.mean(seqs) if seqs else None
+
+    def data_duration(moment: str) -> int | None:
+        spans = [
+            x["timecodeEnd"] - x["timecodeStart"]
+            for x in rich_by_moment.get(moment, [])
+            if x.get("timecodeStart") is not None and x.get("timecodeEnd") is not None
+        ]
+        return round(statistics.median(spans)) if spans else None
+
     # Aggregate shot qualities + a representative cultural note per moment from the records.
     preferred: dict[str, Counter] = {}
     avoid: dict[str, Counter] = {}
@@ -142,20 +178,31 @@ def build() -> dict:
             cue_bits.append(preferred_composition)
         if rep_note:
             cue_bits.append(rep_note)
-        moments[moment] = {
+        entry = {
             "category": category,
             "importance": importance_of(count, kept_total),
-            "audioPolicy": audio_policy_of(moment, category, rep_note),
+            # Prefer the vision-verified audioImportance; fall back to the category heuristic.
+            "audioPolicy": data_audio_policy(moment) or audio_policy_of(moment, category, rep_note),
             "preferredShots": top_values(preferred.get(moment, Counter()), 3),
             "avoidQualities": top_values(avoid.get(moment, Counter()), 3) or ["blurry", "shaky"],
             "classificationCues": " — ".join(cue_bits),
             "referenceCount": count,
         }
+        duration = data_duration(moment)
+        if duration is not None:
+            entry["typicalDurationSec"] = duration
+        moments[moment] = entry
 
     def ordered_for(allowed_cats: list[str], exclude: set[str]) -> list[str]:
         slots = [m for m in moments if moments[m]["category"] in allowed_cats and m not in exclude]
-        # Category arc order, then by frequency (most common first) within a category.
-        slots.sort(key=lambda m: (CATEGORY_ORDER.index(moments[m]["category"]), -moment_counts[m]))
+        # Macro arc by category, then the vision-verified average sequence position within it
+        # (falling back to frequency when a moment has no sequence data).
+        def key(m: str):
+            seq = data_seq_hint(m)
+            return (CATEGORY_ORDER.index(moments[m]["category"]),
+                    seq if seq is not None else 999,
+                    -moment_counts[m])
+        slots.sort(key=key)
         return slots
 
     ceremonies = {
@@ -165,7 +212,7 @@ def build() -> dict:
     }
 
     return {
-        "_note": "Derived from AI-reference by scripts/build_domain_pack.py. Heuristic ordering/importance — review and edit by hand.",
+        "_note": "Derived from AI-reference by scripts/build_domain_pack.py. Audio/order/duration come from vision-verified records where available, else category heuristics. Editable by hand.",
         "domain": taxonomy.get("domain", "malay_wedding"),
         "culture": taxonomy.get("culture", ""),
         "audioPatterns": taxonomy.get("audioPatterns", ""),

@@ -163,9 +163,9 @@ enum AgentInstructions {
              tag_moments. Use inspect_media on any clip you can't confidently place.
           3. Walk the timeline IN ORDER. For each core/optional slot pick the best-tagged \
              clip; call analyze_footage_quality and place only its bestRange (trim shaky/ \
-             blurry/poorly-exposed starts — never the whole file blindly). Verify the \
-             subjects are ready/posed via the frame or inspect_media before placing a \
-             portrait or akad shot.
+             blurry/poorly-exposed starts — never the whole file blindly). When a slot has \
+             typicalDurationSec, aim for roughly that length. Verify the subjects are \
+             ready/posed via the frame or inspect_media before placing a portrait or akad shot.
           4. Honour audioPolicy: feature-original (akad vows, family salam, interviews) \
              keeps the clip's own audio audible — do not bury it under music or cut away \
              while it speaks; music-bed-ok (pelamin, reception) can sit under a track; \

@@ -18,6 +18,7 @@ struct DomainPack: Decodable, Sendable {
         let avoidQualities: [String]
         let classificationCues: String
         let referenceCount: Int?
+        let typicalDurationSec: Int?
     }
 
     /// Ordered moment slots for a ceremony, or nil if the ceremony is unknown.
