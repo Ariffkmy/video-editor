@@ -86,6 +86,22 @@ enum Stabilizer {
             previousBuffer = currentBuffer
         }
 
+        // Compute total motion magnitude to determine if stabilization is needed.
+        // Skip near-static footage (tripod shots) — saves CPU and avoids unnecessary transforms.
+        var maxDisplacement: Double = 0
+        var rmsDisplacement: Double = 0
+        for t in transforms {
+            let d = sqrt(t.tx * t.tx + t.ty * t.ty)
+            maxDisplacement = max(maxDisplacement, d)
+            rmsDisplacement += d * d
+        }
+        rmsDisplacement = sqrt(rmsDisplacement / Double(max(1, transforms.count)))
+        // Thresholds in normalized coords (fraction of frame width):
+        // max displacement < 1% of frame AND RMS < 1% → skip (tripod / gimbal)
+        if maxDisplacement < 0.01 && rmsDisplacement < 0.01 {
+            return nil
+        }
+
         // Interpolate to cover all frames of the clip
         let totalFrames = clip.durationFrames
         let analyzedCount = transforms.count
