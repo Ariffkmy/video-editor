@@ -123,6 +123,7 @@ final class ToolExecutor {
         case .deleteFolder:  return try deleteFolder(editor, args)
         case .openProject:        throw ToolError("open_project must be called before any project is loaded")
         case .setProjectSettings: return try setProjectSettings(editor, args)
+        case .importFont:         return try importFont(args)
         case .sendFeedback:       return try await sendFeedback(editor, args)
         }
     }

@@ -46,6 +46,7 @@ enum ToolName: String, CaseIterable, Sendable {
     case tagMoments = "tag_moments"
     case openProject = "open_project"
     case setProjectSettings = "set_project_settings"
+    case importFont = "import_font"
     case sendFeedback = "send_feedback"
 }
 
@@ -845,6 +846,16 @@ enum ToolDefinitions {
                     "height": ["type": "integer", "description": "Canvas height in pixels. Must be provided with width."],
                     "letterboxRatio": ["type": "number", "description": "Cinematic bar ratio as a decimal (e.g. 2.35 for 2.35:1). Pass 0 to remove bars."],
                 ]
+            )
+        ),
+        AgentTool(
+            name: .importFont,
+            description: "Import a font file (.ttf or .otf) into the global font library. Once imported the font is available in every project and appears in the font picker under 'Imported'. Returns the family name(s) to use with add_texts or set_clip_properties.",
+            inputSchema: objectSchema(
+                properties: [
+                    "path": ["type": "string", "description": "Absolute path to the .ttf or .otf file on disk."],
+                ],
+                required: ["path"]
             )
         ),
         AgentTool(

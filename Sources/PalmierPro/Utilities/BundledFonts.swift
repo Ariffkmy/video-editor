@@ -68,6 +68,21 @@ enum BundledFonts {
         Log.app.notice("BundledFonts: registered \(urls.count) files across \(families.count) families")
     }
 
+    // MARK: - User-imported fonts (for picker)
+
+    private(set) static var importedFamilies: [String] = []
+
+    static func setImportedFamilies(_ families: [String]) {
+        importedFamilies = families.sorted()
+        cachedSystemFamilies = nil
+    }
+
+    static func addImportedFamilies(_ families: [String]) {
+        let merged = Set(importedFamilies).union(families)
+        importedFamilies = merged.sorted()
+        cachedSystemFamilies = nil
+    }
+
     // MARK: - System fonts (for picker)
 
     private static var cachedSystemFamilies: [(name: String, previewable: Bool)]?
@@ -75,9 +90,9 @@ enum BundledFonts {
     /// Cached once — macOS doesn't install fonts mid-session.
     static var systemFamiliesForPicker: [(name: String, previewable: Bool)] {
         if let cached = cachedSystemFamilies { return cached }
-        let bundled = Set(families)
+        let excluded = Set(families).union(importedFamilies)
         let result = NSFontManager.shared.availableFontFamilies
-            .filter { !bundled.contains($0) }
+            .filter { !excluded.contains($0) }
             .map { (name: $0, previewable: canPreviewText(family: $0)) }
         cachedSystemFamilies = result
         return result

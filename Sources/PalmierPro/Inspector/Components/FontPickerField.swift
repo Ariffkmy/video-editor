@@ -57,10 +57,21 @@ struct FontPickerField: View {
                 menu.addItem(makeItem(name: family, previewFamily: family, handler: handler))
             }
             menu.addItem(.separator())
-            let all = NSMenuItem(title: "All fonts", action: nil, keyEquivalent: "")
-            all.isEnabled = false
-            menu.addItem(all)
         }
+
+        if !BundledFonts.importedFamilies.isEmpty {
+            let header = NSMenuItem(title: "Imported", action: nil, keyEquivalent: "")
+            header.isEnabled = false
+            menu.addItem(header)
+            for family in BundledFonts.importedFamilies {
+                menu.addItem(makeItem(name: family, previewFamily: family, handler: handler))
+            }
+            menu.addItem(.separator())
+        }
+
+        let all = NSMenuItem(title: "All fonts", action: nil, keyEquivalent: "")
+        all.isEnabled = false
+        menu.addItem(all)
 
         for entry in BundledFonts.systemFamiliesForPicker {
             menu.addItem(

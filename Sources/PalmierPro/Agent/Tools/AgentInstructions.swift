@@ -19,6 +19,9 @@ enum AgentInstructions {
         - IDs (clipId, mediaRef, folderId, captionGroupId) are returned as short prefixes. \
           Pass them back exactly as given — never pad, complete, or guess a longer form.
 
+        # Language
+        - Respond in whatever language the user writes in. If they write in Malay, reply in Malay.
+
         # Always do
         - Call get_timeline once per session (or after an out-of-band change) for fps, tracks, \
           and existing clip frames. Don't re-read between your own edits — mutation tools \
