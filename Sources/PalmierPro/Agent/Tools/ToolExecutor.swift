@@ -9,21 +9,19 @@ final class ToolExecutor {
     private let editorProvider: () -> EditorViewModel?
     var editor: EditorViewModel? { editorProvider() }
     private let openProjectHandler: ((String) async throws -> EditorViewModel)?
-    private let exportProjectHandler: ((EditorViewModel, String, String, String) async throws -> String)?
 
     init(editor: EditorViewModel) {
         self.editorProvider = { [weak editor] in editor }
         self.openProjectHandler = nil
-        self.exportProjectHandler = nil
     }
 
-    init(editorProvider: @escaping () -> EditorViewModel?, openProject: ((String) async throws -> EditorViewModel)? = nil, exportProject: ((EditorViewModel, String, String, String) async throws -> String)? = nil) {
+    init(editorProvider: @escaping () -> EditorViewModel?, openProject: ((String) async throws -> EditorViewModel)? = nil) {
         self.editorProvider = editorProvider
         self.openProjectHandler = openProject
-        self.exportProjectHandler = exportProject
     }
 
     private var agentUndoStack: [String] = []
+    var feedbackState = FeedbackState()
 
     func execute(name: String, args: [String: Any]) async -> ToolResult {
         guard let tool = ToolName(rawValue: name) else {
@@ -54,6 +52,7 @@ final class ToolExecutor {
         } catch {
             result = .error(error.localizedDescription)
         }
+        feedbackState.record(result, for: tool)
         let elapsed = started.duration(to: .now).seconds
         let telemetry = result.isError ? "Agent tool failed" : "Agent tool finished"
         let payload: Telemetry.Payload = [
@@ -99,10 +98,12 @@ final class ToolExecutor {
         case .setKeyframes:     return try setKeyframes(editor, args)
         case .splitClip:        return try splitClip(editor, args)
         case .rippleDeleteRanges: return try rippleDeleteRanges(editor, args)
+        case .removeWords:   return try await removeWords(editor, args)
         case .syncAudio:     return try await syncAudio(editor, args)
         case .undo:          return try undo(editor)
         case .addTexts:      return try addTexts(editor, args)
         case .addCaptions:   return try await addCaptions(editor, args)
+        case .exportProject: return try await exportProject(editor, args)
         case .generateVideo: return try generate(editor, args, type: .video)
         case .generateImage: return try generate(editor, args, type: .image)
         case .generateAudio: return try await generateAudio(editor, args)
@@ -121,11 +122,10 @@ final class ToolExecutor {
         case .deleteMedia:   return try deleteMedia(editor, args)
         case .deleteFolder:  return try deleteFolder(editor, args)
         case .openProject:   throw ToolError("open_project must be called before any project is loaded")
-        case .exportProject: return try await exportProject(editor, args)
+        case .sendFeedback:  return try await sendFeedback(editor, args)
         }
     }
 
-    /// Opens a project at the given path, making the editor available for subsequent tool calls.
     private func openProject(_ args: [String: Any]) async -> ToolResult {
         guard let path = args.string("path") else {
             return .error("open_project: missing required argument 'path'")
@@ -153,26 +153,6 @@ final class ToolExecutor {
             return .error(err.message)
         } catch {
             return .error("open_project: \(error.localizedDescription)")
-        }
-    }
-
-    /// Exports the current timeline to a video or XML file.
-    private func exportProject(_ editor: EditorViewModel, _ args: [String: Any]) async throws -> ToolResult {
-        guard let outputPath = args.string("outputPath") else {
-            return .error("export_project: missing required argument 'outputPath'")
-        }
-        let formatStr = args.string("format") ?? "h264"
-        let resolutionStr = args.string("resolution") ?? "1080p"
-        guard let handler = exportProjectHandler else {
-            return .error("export_project: export is not available in this context")
-        }
-        do {
-            let result = try await handler(editor, outputPath, formatStr, resolutionStr)
-            return .ok(result)
-        } catch let err as ToolError {
-            return .error(err.message)
-        } catch {
-            return .error("export_project: \(error.localizedDescription)")
         }
     }
 
