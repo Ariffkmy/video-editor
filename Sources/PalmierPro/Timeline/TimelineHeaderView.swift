@@ -10,10 +10,11 @@ final class TimelineHeaderView: NSView {
         .foregroundColor: AppTheme.Text.secondary,
     ]
 
-    /// Rects for mute/hide/sync-lock buttons, indexed by track. Used for hit testing.
+    /// Rects for mute/hide/sync-lock/delete buttons, indexed by track. Used for hit testing.
     var muteButtonRects: [Int: NSRect] = [:]
     var hideButtonRects: [Int: NSRect] = [:]
     var syncLockButtonRects: [Int: NSRect] = [:]
+    var deleteButtonRects: [Int: NSRect] = [:]
 
     init(editor: EditorViewModel) {
         self.editor = editor
@@ -45,6 +46,7 @@ final class TimelineHeaderView: NSView {
         muteButtonRects.removeAll()
         hideButtonRects.removeAll()
         syncLockButtonRects.removeAll()
+        deleteButtonRects.removeAll()
         let stripWidth: CGFloat = 3
         let iconSize: CGFloat = 14
         let iconConfig = NSImage.SymbolConfiguration(pointSize: 11, weight: .regular)
@@ -70,7 +72,12 @@ final class TimelineHeaderView: NSView {
             let iconY = y + (h - iconSize) / 2
             let rightmostX = headerWidth - iconSize - 6
             let syncX = rightmostX - iconSize - 4
+            let deleteX = syncX - iconSize - 4
 
+            deleteButtonRects[i] = drawIcon(
+                x: deleteX, y: iconY, size: iconSize, config: iconConfig, context: ctx,
+                symbol: "trash", tint: NSColor.systemRed.withAlphaComponent(0.6)
+            )
             syncLockButtonRects[i] = drawToggleIcon(
                 x: syncX, y: iconY, size: iconSize, config: iconConfig, context: ctx,
                 active: track.syncLocked, onSymbol: "link", offSymbol: "personalhotspot.slash"
@@ -104,6 +111,17 @@ final class TimelineHeaderView: NSView {
             ctx.setFillColor(AppTheme.Border.divider.cgColor)
             ctx.fill(NSRect(x: 0, y: dividerY - 1, width: headerWidth, height: 2))
         }
+    }
+
+    /// Draw a static SF Symbol button with a fixed tint; returns the hit-test rect (padded).
+    private func drawIcon(
+        x: CGFloat, y: CGFloat, size: CGFloat,
+        config: NSImage.SymbolConfiguration, context: CGContext,
+        symbol: String, tint: NSColor
+    ) -> NSRect {
+        let rect = NSRect(x: x, y: y, width: size, height: size)
+        drawSymbol(symbol, in: rect, tint: tint, config: config, context: context)
+        return rect.insetBy(dx: -4, dy: -4)
     }
 
     /// Draw a toggleable SF Symbol button; returns the hit-test rect (padded).
@@ -150,6 +168,13 @@ final class TimelineHeaderView: NSView {
     override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
 
+        for (ti, rect) in deleteButtonRects {
+            if rect.contains(point) {
+                let trackId = editor.timeline.tracks[ti].id
+                editor.removeTracks(ids: [trackId])
+                return
+            }
+        }
         for (ti, rect) in muteButtonRects {
             if rect.contains(point) {
                 editor.toggleTrackMute(trackIndex: ti)
@@ -217,5 +242,36 @@ final class TimelineHeaderView: NSView {
             options: [.mouseMoved, .activeInKeyWindow, .inVisibleRect],
             owner: self
         ))
+    }
+
+    // MARK: - Context menu
+
+    private func trackIndex(at point: NSPoint) -> Int? {
+        let geo = TimelineGeometry(editor: editor, bounds: bounds)
+        for i in editor.timeline.tracks.indices {
+            let y = geo.trackY(at: i)
+            let h = geo.trackHeight(at: i)
+            if point.y >= y && point.y < y + h { return i }
+        }
+        return nil
+    }
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let point = convert(event.locationInWindow, from: nil)
+        guard let ti = trackIndex(at: point) else { return nil }
+        let trackId = editor.timeline.tracks[ti].id
+
+        let menu = NSMenu()
+        let item = NSMenuItem(title: "Delete Track", action: #selector(performDeleteTrack(_:)), keyEquivalent: "")
+        item.target = self
+        item.representedObject = trackId
+        item.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
+        menu.addItem(item)
+        return menu
+    }
+
+    @objc private func performDeleteTrack(_ sender: NSMenuItem) {
+        guard let trackId = sender.representedObject as? String else { return }
+        editor.removeTracks(ids: [trackId])
     }
 }
