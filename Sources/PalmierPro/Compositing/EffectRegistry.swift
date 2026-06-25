@@ -77,7 +77,7 @@ struct EffectDescriptor: Identifiable, Sendable {
 
 enum EffectRegistry {
 
-    static let all: [EffectDescriptor] = color + wheels + hueCurves + lut + curves + detail + blur + stylize + key + stabilize
+    static let all: [EffectDescriptor] = color + wheels + hueCurves + lut + curves + detail + blur + stylize + key
 
     private static let color: [EffectDescriptor] = [
         EffectDescriptor(
@@ -340,26 +340,6 @@ enum EffectRegistry {
         ),
     ]
 
-    private static let stabilize: [EffectDescriptor] = [
-        EffectDescriptor(
-            id: "stabilize.basic", displayName: "Stabilize", category: "Stabilize",
-            params: [
-                EffectParamSpec(key: "smoothing", label: "Smoothing", range: 0...1,
-                                defaultValue: 0.5, unit: ""),
-            ],
-            apply: { image, p, extent in
-                let smoothing = p.value("smoothing")
-                // Look up cached stabilization data from the effect's cacheKey param
-                guard let cacheKey = p.string("cacheKey"),
-                      let data = StabilizationCache.shared.get(key: cacheKey) else {
-                    return image
-                }
-                let offset = p.frame  // clip-relative frame
-                return Stabilizer.apply(to: image, data: data, frameOffset: offset, extent: extent)
-            }
-        ),
-    ]
-
     static let byId: [String: EffectDescriptor] = Dictionary(
         uniqueKeysWithValues: all.map { ($0.id, $0) }
     )
@@ -372,7 +352,6 @@ enum EffectRegistry {
         "color.temperature", "color.vibrance", "color.saturation", "color.wheels", "color.curves",
         "color.hueCurves", "color.lut", "detail.clarity", "key.chroma", "blur.gaussian", "blur.sharpen",
         "blur.noiseReduction", "blur.motion", "stylize.grain", "stylize.vignette", "stylize.glow",
-        "stabilize.basic",
     ]
 
     static func insertIndex(_ effects: [Effect], for id: String) -> Int {
