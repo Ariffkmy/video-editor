@@ -835,18 +835,6 @@ enum ToolDefinitions {
             )
         ),
         AgentTool(
-            name: .exportProject,
-            description: "Export the current timeline to a video file. Supports H.264 (mp4), H.265 (mp4), ProRes (mov), and XML (Final Cut Pro 7). Resolution options: 720p, 1080p, 2K, 4K, or native (match timeline). Returns the output file path on success. Export runs asynchronously — monitor progress via the returned status.",
-            inputSchema: objectSchema(
-                properties: [
-                    "outputPath": ["type": "string", "description": "Absolute path for the exported file (include extension)."],
-                    "format": ["type": "string", "description": "Export format: 'h264', 'h265', 'prores', or 'xml'. Default: 'h264'."],
-                    "resolution": ["type": "string", "description": "Export resolution: '720p', '1080p', '2K', '4K', or 'native'. Default: '1080p'."],
-                ],
-                required: ["outputPath"]
-            )
-        ),
-        AgentTool(
             name: .sendFeedback,
             description: "Report an agent limitation or bug to the Palmier team so they can improve the product. Use when you can't do what the user asked because a capability or tool is missing or behaves wrong, the result is clearly off, or the user is plainly hitting a rough edge. This sends directly — there is no user confirmation step — so PARAPHRASE in your own words: never include verbatim user messages, prompts, file paths, media, transcript text, or any project content. App/OS version and your recent tool names are attached automatically. Use sparingly: at most once per distinct issue.",
             inputSchema: objectSchema(
