@@ -158,6 +158,24 @@ final class EditorViewModel {
         didSet { UserDefaults.standard.set(keyframesPanelVisible, forKey: "keyframesPanelVisible") }
     }
 
+    var showRulers: Bool = {
+        UserDefaults.standard.object(forKey: "showRulers") as? Bool ?? false
+    }() {
+        didSet { UserDefaults.standard.set(showRulers, forKey: "showRulers") }
+    }
+
+    var showGuides: Bool = {
+        UserDefaults.standard.object(forKey: "showGuides") as? Bool ?? true
+    }() {
+        didSet { UserDefaults.standard.set(showGuides, forKey: "showGuides") }
+    }
+
+    var showSafeZones: Bool = {
+        UserDefaults.standard.object(forKey: "showSafeZones") as? Bool ?? false
+    }() {
+        didSet { UserDefaults.standard.set(showSafeZones, forKey: "showSafeZones") }
+    }
+
     // MARK: - Media panel navigation routing
 
     var mediaPanelOrderedItemIds: [String] = []

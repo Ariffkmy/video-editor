@@ -115,7 +115,7 @@ enum Project {
 
     static var storageDirectory: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Documents/Palmier Pro", isDirectory: true)
+            .appendingPathComponent("Documents/Kawenreel", isDirectory: true)
     }
 
     nonisolated static func ensureStorageDirectory() {

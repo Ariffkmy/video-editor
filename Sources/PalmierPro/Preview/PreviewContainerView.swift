@@ -20,33 +20,66 @@ struct PreviewContainerView: View {
                 let fitSize = fitSize(in: geo.size, aspect: aspect)
                 let scaledWidth = fitSize.width * editor.canvasZoom
                 let scaledHeight = fitSize.height * editor.canvasZoom
+                let canvasOrigin = CGPoint(
+                    x: geo.size.width / 2 - scaledWidth / 2 + editor.canvasOffset.width,
+                    y: geo.size.height / 2 - scaledHeight / 2 + editor.canvasOffset.height
+                )
                 ZStack {
-                    PreviewView()
-                    if isImage {
-                        imagePreview
+                    // Canvas
+                    ZStack {
+                        PreviewView()
+                        if isImage {
+                            imagePreview
+                        }
+                        if let error = activeFailedError {
+                            failedPreview(error: error)
+                        }
+                        if let asset = activeMediaAsset, asset.isGenerating {
+                            generatingPreview(label: asset.generatingLabel)
+                        }
+                        if let overlay = offlineOverlay {
+                            offlinePreview(assetId: overlay.assetId, path: overlay.path, isUnprocessable: overlay.isUnprocessable)
+                        }
+                        if editor.cropEditingActive {
+                            CropOverlayView()
+                        } else {
+                            TransformOverlayView()
+                        }
+                        if editor.showSafeZones {
+                            SafeZonesOverlay()
+                        }
                     }
-                    if let error = activeFailedError {
-                        failedPreview(error: error)
+                    .frame(width: scaledWidth, height: scaledHeight)
+                    .overlay(
+                        Rectangle()
+                            .stroke(Color.white.opacity(editor.canvasZoom < 1.0 ? AppTheme.Opacity.moderate : 0), lineWidth: AppTheme.BorderWidth.thin)
+                    )
+                    .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                    .offset(x: editor.canvasOffset.width, y: editor.canvasOffset.height)
+
+                    // Guide lines
+                    if editor.showGuides && !editor.timeline.guides.isEmpty {
+                        GuidesOverlay(
+                            guides: editor.timeline.guides,
+                            canvasOrigin: canvasOrigin,
+                            canvasSize: CGSize(width: scaledWidth, height: scaledHeight),
+                            onMove: { id, pos in editor.moveGuide(id: id, to: pos) },
+                            onDelete: { id in editor.removeGuide(id: id) }
+                        )
                     }
-                    if let asset = activeMediaAsset, asset.isGenerating {
-                        generatingPreview(label: asset.generatingLabel)
-                    }
-                    if let overlay = offlineOverlay {
-                        offlinePreview(assetId: overlay.assetId, path: overlay.path, isUnprocessable: overlay.isUnprocessable)
-                    }
-                    if editor.cropEditingActive {
-                        CropOverlayView()
-                    } else {
-                        TransformOverlayView()
+
+                    // Rulers
+                    if editor.showRulers {
+                        CanvasRulersView(
+                            canvasOrigin: canvasOrigin,
+                            canvasSize: CGSize(width: scaledWidth, height: scaledHeight),
+                            pixelWidth: editor.timeline.width,
+                            pixelHeight: editor.timeline.height,
+                            onCreateGuide: { axis, pos in editor.addGuide(axis: axis, position: pos) }
+                        )
                     }
                 }
-                .frame(width: scaledWidth, height: scaledHeight)
-                .overlay(
-                    Rectangle()
-                        .stroke(Color.white.opacity(editor.canvasZoom < 1.0 ? AppTheme.Opacity.moderate : 0), lineWidth: AppTheme.BorderWidth.thin)
-                )
-                .position(x: geo.size.width / 2, y: geo.size.height / 2)
-                .offset(x: editor.canvasOffset.width, y: editor.canvasOffset.height)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .clipped()
             if !isImage {
@@ -339,8 +372,8 @@ struct PreviewContainerView: View {
                     .font(.system(size: AppTheme.FontSize.lg, weight: .semibold))
                     .foregroundStyle(AppTheme.Text.primaryColor)
                 Text(isUnprocessable
-                    ? "Palmier loaded this clip's source file but couldn't prepare it for playback. The file may be corrupt or in an unsupported format."
-                    : "Palmier couldn't load this clip's source file. It may be missing, on an ejected drive, or unreadable.")
+                    ? "Kawenreel loaded this clip's source file but couldn't prepare it for playback. The file may be corrupt or in an unsupported format."
+                    : "Kawenreel couldn't load this clip's source file. It may be missing, on an ejected drive, or unreadable.")
                     .font(.system(size: AppTheme.FontSize.sm))
                     .foregroundStyle(AppTheme.Text.secondaryColor)
                     .multilineTextAlignment(.center)

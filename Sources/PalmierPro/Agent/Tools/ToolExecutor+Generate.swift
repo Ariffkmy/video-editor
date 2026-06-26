@@ -4,7 +4,7 @@ extension ToolExecutor {
     func generate(_ editor: EditorViewModel, _ args: [String: Any], type: ClipType) throws -> ToolResult {
         let prompt = try args.requireString("prompt")
         guard AccountService.shared.isSignedIn else {
-            throw ToolError("Generation requires signing in to Palmier. Tell the user to sign in.")
+            throw ToolError("Generation requires signing in to Kawenreel. Tell the user to sign in.")
         }
         guard AccountService.shared.hasCredits else {
             throw ToolError("Out of credits. Tell the user to add credits or subscribe to keep generating.")
@@ -196,7 +196,7 @@ extension ToolExecutor {
 
     func generateAudio(_ editor: EditorViewModel, _ args: [String: Any]) async throws -> ToolResult {
         guard AccountService.shared.isSignedIn else {
-            throw ToolError("Generation requires signing in to Palmier. Tell the user to sign in.")
+            throw ToolError("Generation requires signing in to Kawenreel. Tell the user to sign in.")
         }
         guard AccountService.shared.hasCredits else {
             throw ToolError("Out of credits. Tell the user to add credits or subscribe to keep generating.")
@@ -317,7 +317,7 @@ extension ToolExecutor {
             throw ToolError("Upscale supports video and image assets only (got \(asset.type.rawValue))")
         }
         guard AccountService.shared.isSignedIn else {
-            throw ToolError("Upscale requires signing in to Palmier. Tell the user to sign in.")
+            throw ToolError("Upscale requires signing in to Kawenreel. Tell the user to sign in.")
         }
         guard AccountService.shared.hasCredits else {
             throw ToolError("Out of credits. Tell the user to add credits or subscribe to keep generating.")

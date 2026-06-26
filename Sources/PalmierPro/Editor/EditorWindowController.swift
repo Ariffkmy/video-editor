@@ -258,6 +258,10 @@ extension EditorWindowController: EditorActions {
     @objc func setLayoutDefault(_ sender: Any?) { editorViewModel.layoutPreset = .default }
     @objc func setLayoutMedia(_ sender: Any?) { editorViewModel.layoutPreset = .media }
     @objc func setLayoutVertical(_ sender: Any?) { editorViewModel.layoutPreset = .vertical }
+    @objc func toggleRulers(_ sender: Any?) { editorViewModel.showRulers.toggle() }
+    @objc func toggleGuides(_ sender: Any?) { editorViewModel.showGuides.toggle() }
+    @objc func toggleSafeZones(_ sender: Any?) { editorViewModel.showSafeZones.toggle() }
+    @objc func clearGuides(_ sender: Any?) { editorViewModel.clearGuides() }
 
     private func toggleMaximizePanelAction() {
         if editorViewModel.maximizedPanel != nil {
@@ -290,6 +294,17 @@ extension EditorWindowController: EditorActions {
         case #selector(setLayoutVertical(_:)):
             menuItem.state = editorViewModel.layoutPreset == .vertical ? .on : .off
             return true
+        case #selector(toggleRulers(_:)):
+            menuItem.state = editorViewModel.showRulers ? .on : .off
+            return true
+        case #selector(toggleGuides(_:)):
+            menuItem.state = editorViewModel.showGuides ? .on : .off
+            return true
+        case #selector(toggleSafeZones(_:)):
+            menuItem.state = editorViewModel.showSafeZones ? .on : .off
+            return true
+        case #selector(clearGuides(_:)):
+            return !editorViewModel.timeline.guides.isEmpty
         case #selector(copy(_:)), #selector(cut(_:)):
             return canHandleClipboardShortcut() && !editorViewModel.selectedClipIds.isEmpty
         case #selector(paste(_:)):

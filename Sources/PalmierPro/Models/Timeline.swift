@@ -6,12 +6,23 @@ struct ClipLocation: Equatable, Sendable {
     let clipIndex: Int
 }
 
+enum GuideAxis: String, Codable, Sendable, Equatable {
+    case horizontal, vertical
+}
+
+struct Guide: Codable, Sendable, Equatable, Identifiable {
+    var id: String = UUID().uuidString
+    var axis: GuideAxis
+    var position: Double // normalized 0-1 (top→bottom for horizontal, left→right for vertical)
+}
+
 struct Timeline: Codable, Sendable, Equatable {
     var fps: Int = 30
     var width: Int = 1920
     var height: Int = 1080
     var settingsConfigured: Bool = false
     var letterboxRatio: Double? = nil
+    var guides: [Guide] = []
     var tracks: [Track] = []
 
     var totalFrames: Int {

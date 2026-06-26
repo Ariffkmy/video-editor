@@ -19,8 +19,8 @@ enum MainMenuBuilder {
 
     private static func appMenu() -> NSMenuItem {
         let item = NSMenuItem()
-        let menu = NSMenu(title: "Palmier Pro")
-        menu.addItem(withTitle: "About Palmier Pro", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        let menu = NSMenu(title: "Kawenreel")
+        menu.addItem(withTitle: "About Kawenreel", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         menu.addItem(.separator())
         let updatesItem = NSMenuItem(title: "Check for Updates…", action: #selector(Updater.checkForUpdates(_:)), keyEquivalent: "")
         updatesItem.target = Updater.shared
@@ -28,7 +28,7 @@ enum MainMenuBuilder {
         menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(AppDelegate.showSettings(_:)), keyEquivalent: ",")
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit Palmier Pro", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit Kawenreel", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.submenu = menu
         return item
     }
@@ -124,8 +124,25 @@ enum MainMenuBuilder {
         menu.addItem(.separator())
         menu.addItem(layoutSubmenuItem())
         menu.addItem(.separator())
+        menu.addItem(canvasOverlaysSubmenuItem())
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Enter Full Screen", action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
         item.submenu = menu
+        return item
+    }
+
+    private static func canvasOverlaysSubmenuItem() -> NSMenuItem {
+        let item = NSMenuItem(title: "Canvas Overlays", action: nil, keyEquivalent: "")
+        let submenu = NSMenu(title: "Canvas Overlays")
+        submenu.addItem(withTitle: "Show Rulers", action: #selector(EditorActions.toggleRulers(_:)), keyEquivalent: "r")
+            .keyEquivalentModifierMask = [.command]
+        submenu.addItem(withTitle: "Show Guides", action: #selector(EditorActions.toggleGuides(_:)), keyEquivalent: ";")
+            .keyEquivalentModifierMask = []
+        submenu.addItem(withTitle: "Show Safe Zones", action: #selector(EditorActions.toggleSafeZones(_:)), keyEquivalent: "'")
+            .keyEquivalentModifierMask = []
+        submenu.addItem(.separator())
+        submenu.addItem(withTitle: "Clear Guides", action: #selector(EditorActions.clearGuides(_:)), keyEquivalent: "")
+        item.submenu = submenu
         return item
     }
 
@@ -185,4 +202,8 @@ enum MainMenuBuilder {
     func setLayoutDefault(_ sender: Any?)
     func setLayoutMedia(_ sender: Any?)
     func setLayoutVertical(_ sender: Any?)
+    func toggleRulers(_ sender: Any?)
+    func toggleGuides(_ sender: Any?)
+    func toggleSafeZones(_ sender: Any?)
+    func clearGuides(_ sender: Any?)
 }
