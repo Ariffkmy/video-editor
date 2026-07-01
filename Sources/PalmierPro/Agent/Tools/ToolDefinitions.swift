@@ -36,6 +36,7 @@ enum ToolName: String, CaseIterable, Sendable {
     case applyColor = "apply_color"
     case applyEffect = "apply_effect"
     case inspectColor = "inspect_color"
+    case colorMatchFromReference = "color_match_from_reference"
     case listFolders = "list_folders"
     case createFolder = "create_folder"
     case moveToFolder = "move_to_folder"
@@ -873,6 +874,18 @@ enum ToolDefinitions {
                     "atFrame": ["type": "integer", "description": "Optional project frame to sample a clip. Defaults to the clip's midpoint. Ignored for mediaRef."],
                     "reference": ["type": "string", "description": "Optional image/video asset id from get_media to compare against; returns its scopes + the subject−reference gap."],
                 ]
+            )
+        ),
+        AgentTool(
+            name: .colorMatchFromReference,
+            description: "Color-match one or more clips to a reference video's look. Pass a reference media asset and target clip IDs. The tool automatically measures the color gap between each clip and the reference, then applies the corrections — no manual knob-twiddling needed. Use after building the rough cut to quickly give all clips a consistent grade. Verify results with inspect_timeline.",
+            inputSchema: objectSchema(
+                properties: [
+                    "reference": ["type": "string", "description": "Media asset ID (from get_media) to use as the color reference."],
+                    "clipIds": ["type": "array", "items": ["type": "string"], "description": "Clip IDs to color-match to the reference."],
+                    "strength": ["type": "number", "description": "Optional. 0-1 correction strength. Default 1.0."],
+                ],
+                required: ["reference", "clipIds"]
             )
         ),
         AgentTool(

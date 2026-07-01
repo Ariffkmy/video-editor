@@ -96,6 +96,7 @@ final class ToolExecutor {
         case .applyColor:    return try applyColor(editor, args)
         case .applyEffect:   return try applyEffect(editor, args)
         case .inspectColor:  return try await inspectColor(editor, args)
+        case .colorMatchFromReference: return try await colorMatchFromReference(editor, args)
         case .addClips:         return try addClips(editor, args)
         case .insertClips:      return try insertClips(editor, args)
         case .removeClips:      return try removeClips(editor, args)

@@ -441,4 +441,113 @@ private struct GradeState {
         let a = (hue ?? 0) * .pi / 180, r = amount ?? 0
         return (r * cos(a), r * sin(a))
     }
+
+    // MARK: - Color Match from Reference
+
+    /// Color-match one or more clips to a reference video's color look.
+    /// Measures the reference's color scopes once, then for each target clip
+    /// calculates the gap and applies corrections automatically.
+    func colorMatchFromReference(_ editor: EditorViewModel, _ args: [String: Any]) async throws -> ToolResult {
+        guard let reference = args.string("reference") else {
+            throw ToolError("Missing required argument: reference")
+        }
+        guard let clipIds = args["clipIds"] as? [String], !clipIds.isEmpty else {
+            throw ToolError("Missing required argument: clipIds")
+        }
+        let strength = args.double("strength") ?? 1.0
+        let clampedStrength = min(1.0, max(0.0, strength))
+
+        // Resolve reference asset
+        let refMedia = try asset(reference, editor: editor, label: "Reference")
+        guard let refURL = editor.mediaResolver.resolveURL(for: reference),
+              let refImage = await Self.frameImage(url: refURL, type: refMedia.type, atSeconds: refMedia.duration / 2),
+              let refScopes = ColorScopes.measure(refImage) else {
+            throw ToolError("Could not analyze the reference media. Make sure it is a valid video or image.")
+        }
+
+        // Get reference frame for display
+        let refJPEG = Self.encodeJPEG(refImage)
+
+        var results: [String: Any] = [:]
+        var matched = 0
+        var skipped: [String] = []
+
+        for clipId in clipIds {
+            guard let clip = editor.clipFor(id: clipId) else {
+                skipped.append(clipId)
+                continue
+            }
+            guard clip.mediaType == .video || clip.mediaType == .image else {
+                skipped.append(clipId)
+                continue
+            }
+
+            // Measure the clip's current graded frame at its midpoint
+            let offset = clip.durationFrames / 2
+            let sourceSeconds = (Double(clip.trimStartFrame) + Double(offset) * clip.speed) / Double(editor.timeline.fps)
+
+            guard let srcURL = editor.mediaResolver.resolveURL(for: clip.mediaRef),
+                  let rawFrame = await Self.frameImage(url: srcURL, type: clip.mediaType, atSeconds: sourceSeconds),
+                  let clipScopes = ColorScopes.measure(rawFrame) else {
+                skipped.append(clipId)
+                continue
+            }
+
+            // Calculate gap using the same logic as inspect_color
+            let gap = Self.gap(current: clipScopes, reference: refScopes)
+
+            // Map gap values to apply_color parameters (inverse = correction)
+            // Use existing apply_color mechanism via mutateClips
+            withUndoGroup(editor, actionName: "Color Match (Ref)") {
+                editor.mutateClips(ids: [clipId], actionName: "Color Match") { clip in
+                    var state = GradeState(effects: clip.effects)
+
+                    // Luma adjustments
+                    let db = gap["lumaBlack"] as? Double ?? 0
+                    if abs(db) > 0.01 {
+                        // Inverse: if blacks are higher than ref, lower them
+                        state.blacks = (state.blacks ?? 0) - db * clampedStrength
+                    }
+
+                    // Warm/cool balance
+                    let dw = gap["warmCool"] as? Double ?? 0
+                    if abs(dw) > 0.01 {
+                        state.temperature = (state.temperature ?? 6500) - dw * 1000 * clampedStrength
+                    }
+
+                    // Green/magenta balance
+                    let dg = gap["greenMagenta"] as? Double ?? 0
+                    if abs(dg) > 0.01 {
+                        state.tint = (state.tint ?? 0) - dg * 100 * clampedStrength
+                    }
+
+                    // Saturation
+                    let ds = gap["saturation"] as? Double ?? 0
+                    if abs(ds) > 0.01 {
+                        state.saturation = (state.saturation ?? 1) - ds * clampedStrength
+                    }
+
+                    // Build and apply the correction stack
+                    let nonColor = (clip.effects ?? []).filter { !$0.type.hasPrefix("color.") }
+                    let color = state.buildStack()
+                    clip.effects = nonColor + color
+                }
+            }
+
+            matched += 1
+        }
+
+        // Build result
+        var summary = "Color-matched \(matched) clip(s) to reference '\(refMedia.name)'."
+        if !skipped.isEmpty {
+            summary += " Skipped \(skipped.count) clip(s) (not found or incompatible)."
+        }
+
+        var blocks: [ToolResult.Block] = []
+        if let jpeg = refJPEG {
+            blocks.append(.image(base64: jpeg.base64EncodedString(), mediaType: "image/jpeg"))
+        }
+        blocks.append(.text(summary))
+        return ToolResult(content: blocks, isError: matched == 0)
+    }
 }
