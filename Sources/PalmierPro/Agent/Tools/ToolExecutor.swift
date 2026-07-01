@@ -136,8 +136,8 @@ final class ToolExecutor {
         case .setProjectSettings: return try setProjectSettings(editor, args)
         case .readSkill:     return readSkill(args)
         case .getProjects, .openProject, .newProject:
-            return await runProjectTool(tool, args        case .importFont:         return try importFont(args)
-        )
+            return await runProjectTool(tool, args)
+        case .importFont:         return try importFont(args)
         }
     }
 

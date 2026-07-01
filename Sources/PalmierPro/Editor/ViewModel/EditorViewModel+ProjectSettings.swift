@@ -94,6 +94,15 @@ extension EditorViewModel {
         notifyTimelineChanged()
     }
 
+    func applyLetterboxRatio(_ ratio: Double?) {
+        let prev = timeline.letterboxRatio
+        guard prev != ratio else { return }
+        timeline.letterboxRatio = ratio
+        undoManager?.registerUndo(withTarget: self) { vm in vm.applyLetterboxRatio(prev) }
+        undoManager?.setActionName(ratio == nil ? "Remove Letterbox" : "Apply Letterbox")
+        notifyTimelineChanged()
+    }
+
     private func transformScale(_ transform: Transform, matches other: Transform) -> Bool {
         abs(transform.width - other.width) < 0.0001 && abs(transform.height - other.height) < 0.0001
     }

@@ -52,10 +52,8 @@ enum ToolName: String, CaseIterable, Sendable {
     case setProjectSettings = "set_project_settings"
     case importFont = "import_font"
     case sendFeedback = "send_feedback"
-    case setProjectSettings = "set_project_settings"
     case readSkill = "read_skill"
     case getProjects = "get_projects"
-    case openProject = "open_project"
     case newProject = "new_project"
 }
 

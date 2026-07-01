@@ -441,9 +441,11 @@ private struct GradeState {
         let a = (hue ?? 0) * .pi / 180, r = amount ?? 0
         return (r * cos(a), r * sin(a))
     }
+}
 
     // MARK: - Color Match from Reference
 
+extension ToolExecutor {
     /// Color-match one or more clips to a reference video's color look.
     /// Measures the reference's color scopes once, then for each target clip
     /// calculates the gap and applies corrections automatically.

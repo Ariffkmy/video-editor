@@ -29,6 +29,7 @@ struct MediaManifestEntry: Codable, Sendable, Equatable, Identifiable {
     var sourceFPS: Double?
     var hasAudio: Bool?
     var folderId: String?
+    var momentTag: MomentTag?
     var cachedRemoteURL: String?
     var cachedRemoteURLExpiresAt: Date?
     var generationStatus: String?
@@ -39,6 +40,14 @@ struct MediaImportInput: Codable, Sendable, Equatable {
     var sourceURL: String? = nil
     var sourcePath: String? = nil
     var createdAt: Date? = nil
+}
+
+/// Domain moment classification attached to a media asset (e.g. "akad_nikah").
+struct MomentTag: Codable, Sendable, Equatable {
+    var momentType: String
+    var ceremonyType: String?
+    var confidence: Double
+    var source: String   // filename | vision | agent
 }
 
 struct GenerationInput: Codable, Sendable, Equatable {
