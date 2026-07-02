@@ -40,8 +40,20 @@ final class SupabaseService {
         _ = try await client.auth.signIn(email: email, password: password)
     }
 
-    func signUp(email: String, password: String) async throws {
-        _ = try await client.auth.signUp(email: email, password: password)
+    /// True when a session was created immediately; false when Supabase requires
+    /// email confirmation first (no session until the link is clicked).
+    @discardableResult
+    func signUp(email: String, password: String) async throws -> Bool {
+        let response = try await client.auth.signUp(email: email, password: password)
+        return response.session != nil
+    }
+
+    func resendConfirmation(email: String) async throws {
+        try await client.auth.resend(email: email, type: .signup)
+    }
+
+    func sendPasswordReset(email: String) async throws {
+        try await client.auth.resetPasswordForEmail(email)
     }
 
     func signOut() async {

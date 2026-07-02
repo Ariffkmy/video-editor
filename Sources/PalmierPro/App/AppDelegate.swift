@@ -7,6 +7,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
 
+        InstallLocation.offerMoveIfLaunchedFromDMG()
+
         // Start Sparkle updater
         _ = Updater.shared
 

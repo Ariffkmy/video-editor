@@ -1,13 +1,12 @@
 import AppKit
 import SwiftUI
 
-/// First-launch welcome shown over the Home screen
+/// One-time card over Home offering the guided sample-project tutorial.
+/// Account setup and personalization happen in onboarding before this appears.
 struct WelcomeOverlay: View {
     let onDismiss: () -> Void
 
-    @Bindable private var account = AccountService.shared
     @State private var startingTutorial = false
-    private static let hero: NSImage? = loadHero()
 
     var body: some View {
         ZStack {
@@ -22,16 +21,15 @@ struct WelcomeOverlay: View {
     private var card: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                Text("Welcome to Kawenreel")
+                Text("Learn the editor in 2 minutes")
                     .font(.system(size: AppTheme.FontSize.title2, weight: .light))
                     .tracking(AppTheme.Tracking.tight)
                     .foregroundStyle(AppTheme.Text.primaryColor)
-                Text("A video editor built for AI. Generate, and edit all in one place.")
+                Text("Open a sample project and let the tour walk you through your first AI edit. Kawenreel is in beta — the feedback button in the editor reaches us directly.")
                     .font(.system(size: AppTheme.FontSize.smMd))
                     .foregroundStyle(AppTheme.Text.secondaryColor)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            heroImage
             HStack(spacing: AppTheme.Spacing.sm) {
                 Button("Skip") { onDismiss() }
                     .buttonStyle(.capsule(.secondary, size: .regular))
@@ -47,11 +45,11 @@ struct WelcomeOverlay: View {
                         Text("Watch Tutorial")
                     }
                 }
-                .buttonStyle(.capsule(.secondary, size: .regular))
+                .buttonStyle(.capsule(.prominent, size: .regular))
+                .keyboardShortcut(.defaultAction)
                 .disabled(startingTutorial)
-                signInButton
             }
-            .padding(.top, AppTheme.Spacing.lg)
+            .padding(.top, AppTheme.Spacing.sm)
         }
         .padding(AppTheme.Spacing.xxl)
         .background(
@@ -63,22 +61,6 @@ struct WelcomeOverlay: View {
                 )
         )
         .shadow(AppTheme.Shadow.lg)
-    }
-
-    @ViewBuilder
-    private var signInButton: some View {
-        if account.aiAllowed || account.isMisconfigured {
-            Button("Get started") { onDismiss() }
-                .buttonStyle(.capsule(.prominent, size: .regular))
-                .keyboardShortcut(.defaultAction)
-        } else {
-            Button(account.isSigningIn ? "Opening Google…" : "Sign In") {
-                Task { await account.signInWithGoogle() }
-            }
-                .buttonStyle(.capsule(.prominent, size: .regular))
-                .keyboardShortcut(.defaultAction)
-                .disabled(account.isSigningIn)
-        }
     }
 
     /// Open the first sample (downloading if needed); it auto-starts the tutorial.
@@ -97,31 +79,5 @@ struct WelcomeOverlay: View {
                 // Leave the welcome up so the user can retry or skip.
             }
         }
-    }
-
-    @ViewBuilder
-    private var heroImage: some View {
-        Group {
-            if let hero = Self.hero {
-                Image(nsImage: hero).resizable().aspectRatio(contentMode: .fill)
-            } else {
-                AppTheme.aiGradient
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 240)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
-    }
-
-    private static func loadHero() -> NSImage? {
-        guard let root = Bundle.main.resourceURL else { return nil }
-        let candidates = [
-            root.appendingPathComponent("Images/welcome-butterfly.jpg"),
-            root.appendingPathComponent("PalmierPro_PalmierPro.bundle/Images/welcome-butterfly.jpg"),
-        ]
-        for url in candidates where FileManager.default.fileExists(atPath: url.path) {
-            return NSImage(contentsOf: url)
-        }
-        return nil
     }
 }
