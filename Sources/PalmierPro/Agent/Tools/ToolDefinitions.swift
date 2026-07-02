@@ -48,6 +48,9 @@ enum ToolName: String, CaseIterable, Sendable {
     case getReferenceGuidance = "get_reference_guidance"
     case classifyMoments = "classify_moments"
     case tagMoments = "tag_moments"
+    case setStyleReference = "set_style_reference"
+    case removeStyleReference = "remove_style_reference"
+    case getStyleGuidance = "get_style_guidance"
     case openProject = "open_project"
     case setProjectSettings = "set_project_settings"
     case importFont = "import_font"
@@ -876,14 +879,15 @@ enum ToolDefinitions {
         ),
         AgentTool(
             name: .colorMatchFromReference,
-            description: "Color-match one or more clips to a reference video's look. Pass a reference media asset and target clip IDs. The tool automatically measures the color gap between each clip and the reference, then applies the corrections — no manual knob-twiddling needed. Use after building the rough cut to quickly give all clips a consistent grade. Verify results with inspect_timeline.",
+            description: "Color-match one or more clips to a reference look. Pass a reference media asset, or useStyleReference: true to match the user's registered style references (see get_style_guidance). The tool measures the color gap per clip and applies the corrections — no manual knob-twiddling needed. Use after building the rough cut to quickly give all clips a consistent grade. Verify results with inspect_timeline.",
             inputSchema: objectSchema(
                 properties: [
-                    "reference": ["type": "string", "description": "Media asset ID (from get_media) to use as the color reference."],
+                    "reference": ["type": "string", "description": "Media asset ID (from get_media) to use as the color reference. Omit when using useStyleReference."],
+                    "useStyleReference": ["type": "boolean", "description": "Match the merged style-reference color profile (project refs win over global)."],
                     "clipIds": ["type": "array", "items": ["type": "string"], "description": "Clip IDs to color-match to the reference."],
                     "strength": ["type": "number", "description": "Optional. 0-1 correction strength. Default 1.0."],
                 ],
-                required: ["reference", "clipIds"]
+                required: ["clipIds"]
             )
         ),
         AgentTool(
@@ -899,7 +903,7 @@ enum ToolDefinitions {
         ),
         AgentTool(
             name: .classifyMoments,
-            description: "Prepares per-clip classification inputs for domain footage: for each video asset it returns a representative midpoint frame (as an image), the filename sequence hint, duration, and the candidate moment types with their cues. Use it to tag what each clip depicts before assembling — look at each frame, decide its momentType, then call tag_moments. Defaults to all video assets; pass mediaRefs to scope, or maxClips to page (max 24 per call). Escalate any clip you can't place with inspect_media.",
+            description: "Classifies domain footage on-device against real reference footage and returns per-clip predictions. Clips tagged earlier (imports are auto-tagged in the background) come back under alreadyTagged and cost nothing; confident predictions need only tag_moments; only low-confidence clips attach a frame image for you to decide. Defaults to all video assets; pass mediaRefs to scope or force re-classification, or maxClips to page (max 24 per call). Escalate any clip you can't place with inspect_media.",
             inputSchema: objectSchema(
                 properties: [
                     "domain": ["type": "string", "description": "Domain pack id. Default malay_wedding."],
@@ -929,6 +933,37 @@ enum ToolDefinitions {
                     ],
                 ],
                 required: ["tags"]
+            )
+        ),
+        AgentTool(
+            name: .setStyleReference,
+            description: "Registers a reference video whose editing style the user wants copied (color/grade, moment ordering, cut tempo, vibe). Project scope: pass the mediaRef of an imported video — it is flagged as a reference (never placed on the timeline) and analyzed in the background. Global scope: pass an absolute file path — the video is copied into the user's global style library and applies to every project. Pass vibeNotes to store your reading of the reference's mood after viewing frames from get_style_guidance.",
+            inputSchema: objectSchema(
+                properties: [
+                    "mediaRef": ["type": "string", "description": "Imported video asset id → project-scope reference."],
+                    "path": ["type": "string", "description": "Absolute file path → global-scope reference (copied into the library)."],
+                    "scope": ["type": "string", "enum": ["project", "global"], "description": "Explicit scope; inferred from mediaRef/path when omitted."],
+                    "vibeNotes": ["type": "string", "description": "Your short description of the reference's mood/energy/aesthetic, stored on its profile."],
+                ]
+            )
+        ),
+        AgentTool(
+            name: .removeStyleReference,
+            description: "Removes a style reference. Pass id for a global reference (deletes it from the library) or mediaRef for a project reference (unflags the asset; it stays in the media library).",
+            inputSchema: objectSchema(
+                properties: [
+                    "id": ["type": "string", "description": "Global reference id (from get_style_guidance)."],
+                    "mediaRef": ["type": "string", "description": "Project asset id to unflag."],
+                ]
+            )
+        ),
+        AgentTool(
+            name: .getStyleGuidance,
+            description: "Returns the editing style the user wants followed, merged from their reference videos with per-aspect priority: project references override global ones; the bundled domain pack is the last fallback (each aspect names its source). Covers color targets (apply via color_match_from_reference {useStyleReference: true}), cut tempo (median shot length, BPM, cuts-on-beat), moment ordering, and vibe notes. Call at the start of any editing task. Pass includeFrames to also receive representative frames so you can judge the vibe yourself (store it back via set_style_reference vibeNotes).",
+            inputSchema: objectSchema(
+                properties: [
+                    "includeFrames": ["type": "boolean", "description": "Attach up to 3 representative frames per reference tier for vibe reading."],
+                ]
             )
         ),
         AgentTool(

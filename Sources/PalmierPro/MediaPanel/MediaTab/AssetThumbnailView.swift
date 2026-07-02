@@ -87,6 +87,11 @@ struct AssetThumbnailView: View {
             }
             Button("Rename") { beginRename() }
             AIEditMenu(asset: asset)
+            if asset.type == .video {
+                Button(asset.isStyleReference ? "Remove Style Reference" : "Use as Style Reference") {
+                    toggleStyleReference()
+                }
+            }
             Divider()
         }
         Button("Reveal in Finder") { revealInFinder(ids: ids) }
@@ -102,6 +107,16 @@ struct AssetThumbnailView: View {
                 .map(\.id)
         }
         return [asset.id]
+    }
+
+    private func toggleStyleReference() {
+        asset.isStyleReference.toggle()
+        if let idx = editor.mediaManifest.entries.firstIndex(where: { $0.id == asset.id }) {
+            editor.mediaManifest.entries[idx].isStyleReference = asset.isStyleReference ? true : nil
+        }
+        if asset.isStyleReference {
+            StyleReferenceStore.shared.analyzeAssetIfNeeded(url: asset.url)
+        }
     }
 
     private func relinkFile() {
@@ -186,8 +201,21 @@ struct AssetThumbnailView: View {
             if asset.isGenerated && !asset.isGenerating {
                 sourceBadge
             }
+            if asset.isStyleReference {
+                styleReferenceBadge
+            }
         }
         .padding(AppTheme.Spacing.xs)
+    }
+
+    private var styleReferenceBadge: some View {
+        Text("REF")
+            .font(.system(size: AppTheme.FontSize.xxs, weight: .semibold))
+            .foregroundStyle(AppTheme.Accent.primary)
+            .padding(.horizontal, AppTheme.Spacing.sm)
+            .padding(.vertical, AppTheme.Spacing.xxs)
+            .background(Color.black.opacity(AppTheme.Opacity.prominent), in: .capsule)
+            .help("Style reference — analyzed for look and pacing, never placed on the timeline")
     }
 
     @ViewBuilder

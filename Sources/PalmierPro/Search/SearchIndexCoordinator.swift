@@ -15,9 +15,16 @@ final class SearchIndexCoordinator {
     }
 
     var assetsProvider: () -> [MediaAsset] = { [] }
+    /// Persists an auto-classified moment tag (asset + manifest). Set by EditorViewModel.
+    var momentTagWriter: ((MediaAsset, MomentTag) -> Void)?
+
+    /// Domain used for the fast auto-tag pass at import.
+    static let autoTagDomain = "malay_wedding"
 
     private var queue: [String] = []
     private var failedIds: Set<String> = []
+    /// Clips classified this session without a confident tag — don't retry every sweep.
+    private var autoTagAttempted: Set<String> = []
     private var worker: Task<Void, Never>?
     /// Bumped whenever `worker` is replaced or cancelled, so a stale worker's
     /// exit path can't clobber the reference to a newer one.
@@ -40,6 +47,7 @@ final class SearchIndexCoordinator {
             await c.cancelIndexing()
             c.loadedIndexes.removeAll()
             c.failedIds.removeAll()
+            c.autoTagAttempted.removeAll()
         }
     }
 
@@ -88,18 +96,23 @@ final class SearchIndexCoordinator {
         guard !queue.contains(asset.id), !failedIds.contains(asset.id) else { return }
         let needsVisual = (asset.type == .video || asset.type == .image)
             && VisualIndexer.needsIndex(url: asset.url, spec: model.spec)
-        guard needsVisual || needsTranscript(asset) else { return }
+        guard needsVisual || needsMomentTag(asset) else { return }
         queue.append(asset.id)
         batchTotal += 1
         ensureWorker()
     }
 
+    /// Transcription is never pre-warmed: captions and agent tools transcribe on demand.
     static func wantsTranscript(_ asset: MediaAsset) -> Bool {
         asset.type == .audio || (asset.type == .video && asset.hasAudio)
     }
 
-    private func needsTranscript(_ asset: MediaAsset) -> Bool {
-        Self.wantsTranscript(asset) && !TranscriptCache.hasCachedOnDisk(for: asset.url)
+    /// Auto-tagging only runs on the prototype classifier — text-cue zero-shot is too
+    /// weak to write tags unattended.
+    private func needsMomentTag(_ asset: MediaAsset) -> Bool {
+        asset.type == .video && asset.momentTag == nil && !asset.isStyleReference
+            && !autoTagAttempted.contains(asset.id)
+            && DomainPrototypeStore.load(Self.autoTagDomain) != nil
     }
 
     /// Stops the worker and waits for the in-flight asset to actually stop.
@@ -157,21 +170,14 @@ final class SearchIndexCoordinator {
     private func indexOne(_ asset: MediaAsset) async {
         defer { batchCompleted += 1 }
         guard let model = VisualModelLoader.shared.embedder else { return }
-        let transcribe = needsTranscript(asset)
-        let visualShare = transcribe ? 0.5 : 1.0
         let onProgress: @Sendable (Double) -> Void = { [weak self] fraction in
-            Task { @MainActor [weak self] in self?.currentAssetFraction = fraction * visualShare }
+            Task { @MainActor [weak self] in self?.currentAssetFraction = fraction }
         }
         let url = asset.url
-        let isVideo = asset.type == .video
         let start = ContinuousClock.now
         do {
-            async let transcriptDone: Void = {
-                if transcribe {
-                    try await ExportCoordinator.waitWhileExportActive()
-                    _ = try await TranscriptCache.shared.transcript(for: url, isVideo: isVideo, range: nil)
-                }
-            }()
+            // Fast moment tag first, so the agent can edit before the full index lands.
+            await autoTagIfNeeded(asset)
             switch asset.type {
             case .image:
                 try await VisualIndexer.indexImage(url: url, model: model)
@@ -183,20 +189,39 @@ final class SearchIndexCoordinator {
                 break
             }
             loadedIndexes[asset.id] = nil
-            let visualSeconds = start.duration(to: .now).seconds
-            currentAssetFraction = visualShare
-            try await transcriptDone
             let totalSeconds = start.duration(to: .now).seconds
-            Log.search.notice("""
-                indexed \(asset.id.prefix(8)) visual=\(String(format: "%.1f", visualSeconds))s \
-                total=\(String(format: "%.1f", totalSeconds))s transcribed=\(transcribe)
-                """)
+            Log.search.notice("indexed \(asset.id.prefix(8)) visual=\(String(format: "%.1f", totalSeconds))s")
         } catch is CancellationError {
             Log.search.notice("index cancelled asset=\(asset.id.prefix(8)) type=\(asset.type.rawValue)")
         } catch {
             failedIds.insert(asset.id)
             Log.search.warning("index failed asset=\(asset.id.prefix(8)): \(error.localizedDescription)")
         }
+    }
+
+    /// Classifies the clip against the bundled moment prototypes and persists the tag
+    /// when the local match is confident and the clip isn't junk. Uncertain clips stay
+    /// untagged for the agent's classify_moments pass.
+    private func autoTagIfNeeded(_ asset: MediaAsset) async {
+        guard needsMomentTag(asset) else { return }
+        guard FileManager.default.fileExists(atPath: asset.url.path) else { return }
+        autoTagAttempted.insert(asset.id)
+        let domain = Self.autoTagDomain
+        let cues = DomainPackStore.load(domain).map { pack in
+            pack.momentNames.compactMap { name in
+                pack.moment(name).map { (name, $0.classificationCues) }
+            }
+        } ?? []
+        let result = await MomentClassifier.classify(
+            clips: [(index: 0, url: asset.url, duration: asset.duration)],
+            domain: domain, cues: cues
+        )[0]
+        guard let result, result.confident, result.usable, let moment = result.moment else { return }
+        momentTagWriter?(asset, MomentTag(
+            momentType: moment, ceremonyType: nil,
+            confidence: result.confidence, source: "local"
+        ))
+        Log.search.notice("auto-tagged \(asset.id.prefix(8)) as \(moment)")
     }
 
     // MARK: - Query

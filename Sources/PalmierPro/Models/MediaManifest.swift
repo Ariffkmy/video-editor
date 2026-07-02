@@ -30,6 +30,7 @@ struct MediaManifestEntry: Codable, Sendable, Equatable, Identifiable {
     var hasAudio: Bool?
     var folderId: String?
     var momentTag: MomentTag?
+    var isStyleReference: Bool?
     var cachedRemoteURL: String?
     var cachedRemoteURLExpiresAt: Date?
     var generationStatus: String?
@@ -47,7 +48,7 @@ struct MomentTag: Codable, Sendable, Equatable {
     var momentType: String
     var ceremonyType: String?
     var confidence: Double
-    var source: String   // filename | vision | agent
+    var source: String   // filename | vision | agent | local (on-device auto-tag)
 }
 
 struct GenerationInput: Codable, Sendable, Equatable {

@@ -131,6 +131,82 @@ struct DomainToolsTests {
         #expect(clips?.count == 1)
         #expect(clips?.first?["filenameSequenceHint"] as? String == "0023")
     }
+
+    @Test func classifyMomentsSkipsAlreadyTaggedClips() async throws {
+        let h = ToolHarness()
+        let tagged = h.addAsset(id: "vidTagged")
+        tagged.momentTag = MomentTag(momentType: "akad_nikah", ceremonyType: nil, confidence: 0.9, source: "local")
+        h.addAsset(id: "vidNew")
+
+        let result = await h.runRaw("classify_moments", args: [:])
+        #expect(result.isError == false)
+        let json = textPayload(result)
+        let clips = json?["clips"] as? [[String: Any]]
+        #expect(clips?.count == 1)
+        #expect(clips?.first?["mediaRef"] as? String == "vidNew")
+        let already = json?["alreadyTagged"] as? [[String: Any]]
+        #expect(already?.count == 1)
+        #expect(already?.first?["mediaRef"] as? String == "vidTagged")
+        #expect(already?.first?["momentType"] as? String == "akad_nikah")
+    }
+
+    @Test func classifyMomentsExplicitRefsForceReclassification() async throws {
+        let h = ToolHarness()
+        let tagged = h.addAsset(id: "vidTagged")
+        tagged.momentTag = MomentTag(momentType: "akad_nikah", ceremonyType: nil, confidence: 0.9, source: "local")
+
+        let result = await h.runRaw("classify_moments", args: ["mediaRefs": ["vidTagged"]])
+        #expect(result.isError == false)
+        let json = textPayload(result)
+        let clips = json?["clips"] as? [[String: Any]]
+        #expect(clips?.count == 1)
+        #expect(clips?.first?["existingTag"] as? String == "akad_nikah")
+        #expect(json?["alreadyTagged"] == nil)
+    }
+}
+
+@Suite("Moment prototypes — decode + bundled resource")
+@MainActor
+struct MomentPrototypeTests {
+
+    @Test func decodesPrototypeJSON() throws {
+        let json = """
+        {
+          "domain": "malay_wedding", "model": "siglip2-base-patch16-256",
+          "dim": 4, "marginFloor": 0.02,
+          "classes": [
+            { "moment": "akad_nikah", "count": 40, "threshold": 0.55,
+              "centroids": [[0.5, 0.5, 0.5, 0.5], [1, 0, 0, 0]] }
+          ]
+        }
+        """
+        let p = try JSONDecoder().decode(DomainPrototypes.self, from: Data(json.utf8))
+        #expect(p.dim == 4)
+        #expect(p.classes.first?.centroids.count == 2)
+        #expect(p.classes.first?.threshold == 0.55)
+    }
+
+    @Test func bundledPrototypesLoadAndMatchPackMoments() throws {
+        guard let prototypes = DomainPrototypeStore.load("malay_wedding") else {
+            Issue.record("malay_wedding prototypes not found in bundle")
+            return
+        }
+        #expect(prototypes.model == "siglip2-base-patch16-256")
+        #expect(!prototypes.classes.isEmpty)
+        #expect(prototypes.classes.allSatisfy { $0.centroids.allSatisfy { $0.count == prototypes.dim } })
+        #expect(prototypes.classes.allSatisfy { $0.threshold > 0 && $0.threshold < 1 })
+        // Every prototype class must be a moment the domain pack knows (tag_moments validates against the pack).
+        if let pack = DomainPackStore.load("malay_wedding") {
+            #expect(prototypes.classes.allSatisfy { pack.moment($0.moment) != nil })
+        }
+    }
+
+    @Test func cosineMathBehaves() {
+        let v = MomentClassifier.normalize([3, 4])
+        #expect(abs(MomentClassifier.dot(v, v) - 1) < 1e-5)
+        #expect(MomentClassifier.dot([1, 0], [0, 1]) == 0)
+        #expect(MomentClassifier.softmaxTop([0.9, 0.1, 0.1]) > 0.9)
+    }
 }
 
 @Suite("Footage exposure")

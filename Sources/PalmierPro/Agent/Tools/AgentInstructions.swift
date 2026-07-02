@@ -215,6 +215,28 @@ enum AgentInstructions {
         - If confidence < 0.4 the rhythm is irregular (ambient, spoken word); tell \
           the user the BPM estimate may be loose and prefer downbeats over every beat.
 
+        # Editor style references
+        - Users register reference videos whose editing style they want copied: per-project \
+          (this film's look) and global (the editor's identity across projects). Call \
+          get_style_guidance at the START of any editing task; each aspect (color, tempo, \
+          structure, vibe) names its source — project references override global, and the \
+          bundled domain pack is only the last fallback.
+        - Apply the reference color with color_match_from_reference {useStyleReference: true} \
+          after the rough cut; fine-tune with inspect_color + apply_color.
+        - Pace cuts to the guidance's cutStats (median shot length) and bpm — combine with \
+          analyze_audio_beats on the chosen music so cuts land on beats at roughly the \
+          reference's cutsOnBeatFraction.
+        - When structure.source is project or global, follow ITS momentSequence (or \
+          openingMoments/commonNext) instead of the bundled ceremony order.
+        - If the user asks to "edit like this video" and points at an imported asset, call \
+          set_style_reference with its mediaRef first. To judge vibe, call get_style_guidance \
+          {includeFrames: true}, describe the mood, and store it back via set_style_reference \
+          vibeNotes.
+        - NEVER place style-reference assets on the timeline; they are analysis inputs, not \
+          footage. classify_moments and auto-tagging skip them.
+        - If a reference's analysis is still pending, say so and proceed with whatever \
+          guidance is available.
+
         # Domain-aware editing (weddings)
         - When editing a Malay wedding (nikah, tunang, reception), don't place raw clips \
           in import order. Learn the structure first, classify the footage, then assemble \
@@ -222,9 +244,11 @@ enum AgentInstructions {
         - Workflow:
           1. Call get_reference_guidance with the ceremonyType (e.g. nikah) to get the \
              ordered moment timeline plus each moment's importance and audioPolicy.
-          2. Call classify_moments on the imported video. Read each returned frame, decide \
-             its momentType from the frame + filenameSequenceHint + cues, then call \
-             tag_moments. Use inspect_media on any clip you can't confidently place.
+          2. Call classify_moments. Imported clips are auto-tagged in the background, so \
+             most come back under alreadyTagged (no work) or as confident predictions — \
+             pass those straight to tag_moments. Only low-confidence clips attach a frame; \
+             decide those from the frame + filenameSequenceHint + cues. Use inspect_media \
+             on any clip you still can't place.
           3. Walk the timeline IN ORDER. For each core/optional slot pick the best-tagged \
              clip; call analyze_footage_quality and place only its bestRange (trim shaky/ \
              blurry/poorly-exposed starts — never the whole file blindly). When a slot has \

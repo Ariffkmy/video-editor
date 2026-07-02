@@ -450,25 +450,35 @@ extension ToolExecutor {
     /// Measures the reference's color scopes once, then for each target clip
     /// calculates the gap and applies corrections automatically.
     func colorMatchFromReference(_ editor: EditorViewModel, _ args: [String: Any]) async throws -> ToolResult {
-        guard let reference = args.string("reference") else {
-            throw ToolError("Missing required argument: reference")
-        }
         guard let clipIds = args["clipIds"] as? [String], !clipIds.isEmpty else {
             throw ToolError("Missing required argument: clipIds")
         }
         let strength = args.double("strength") ?? 1.0
         let clampedStrength = min(1.0, max(0.0, strength))
 
-        // Resolve reference asset
-        let refMedia = try asset(reference, editor: editor, label: "Reference")
-        guard let refURL = editor.mediaResolver.resolveURL(for: reference),
-              let refImage = await Self.frameImage(url: refURL, type: refMedia.type, atSeconds: refMedia.duration / 2),
-              let refScopes = ColorScopes.measure(refImage) else {
-            throw ToolError("Could not analyze the reference media. Make sure it is a valid video or image.")
+        // Reference scopes: an explicit asset, or the merged style-reference profile.
+        let refScopes: Scopes
+        let refName: String
+        var refJPEG: Data?
+        if let reference = args.string("reference") {
+            let refMedia = try asset(reference, editor: editor, label: "Reference")
+            guard let refURL = editor.mediaResolver.resolveURL(for: reference),
+                  let refImage = await Self.frameImage(url: refURL, type: refMedia.type, atSeconds: refMedia.duration / 2),
+                  let scopes = ColorScopes.measure(refImage) else {
+                throw ToolError("Could not analyze the reference media. Make sure it is a valid video or image.")
+            }
+            refScopes = scopes
+            refName = refMedia.name
+            refJPEG = Self.encodeJPEG(refImage)
+        } else if args["useStyleReference"] as? Bool == true {
+            guard let scopes = styleReferenceScopes(editor) else {
+                throw ToolError("No analyzed style reference available. Register one with set_style_reference (or wait for its analysis), or pass an explicit reference asset.")
+            }
+            refScopes = scopes
+            refName = "style reference profile"
+        } else {
+            throw ToolError("Pass reference (media asset id) or useStyleReference: true.")
         }
-
-        // Get reference frame for display
-        let refJPEG = Self.encodeJPEG(refImage)
 
         var results: [String: Any] = [:]
         var matched = 0
@@ -540,7 +550,7 @@ extension ToolExecutor {
         }
 
         // Build result
-        var summary = "Color-matched \(matched) clip(s) to reference '\(refMedia.name)'."
+        var summary = "Color-matched \(matched) clip(s) to reference '\(refName)'."
         if !skipped.isEmpty {
             summary += " Skipped \(skipped.count) clip(s) (not found or incompatible)."
         }

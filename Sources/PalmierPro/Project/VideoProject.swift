@@ -391,6 +391,7 @@ final class VideoProject: NSDocument {
             editorViewModel.seedGenerationLogFromAssets()
         }
         editorViewModel.searchIndex.projectOpened()
+        StyleReferenceStore.shared.sweep(editor: editorViewModel)
         editorViewModel.updateTelemetryContext()
         Telemetry.breadcrumb(
             "Project opened",

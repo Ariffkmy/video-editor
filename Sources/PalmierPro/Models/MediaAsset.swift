@@ -19,6 +19,8 @@ final class MediaAsset: Identifiable {
     var generationStatus: GenerationStatus = .none
     var folderId: String?
     var momentTag: MomentTag?
+    /// Style reference for the AI: analyzed for look/pacing, never placed on the timeline.
+    var isStyleReference = false
     var pendingDownloadURL: URL?
     var cachedRemoteURL: String?
     var cachedRemoteURLExpiresAt: Date?
@@ -115,6 +117,7 @@ final class MediaAsset: Identifiable {
         self.hasAudio = entry.hasAudio ?? false
         self.folderId = entry.folderId
         self.momentTag = entry.momentTag
+        self.isStyleReference = entry.isStyleReference ?? false
         self.cachedRemoteURL = entry.cachedRemoteURL
         self.cachedRemoteURLExpiresAt = entry.cachedRemoteURLExpiresAt
         self.importInput = entry.importInput
@@ -138,6 +141,7 @@ final class MediaAsset: Identifiable {
             sourceWidth: sourceWidth, sourceHeight: sourceHeight, sourceFPS: sourceFPS,
             hasAudio: hasAudio, folderId: folderId,
             momentTag: momentTag,
+            isStyleReference: isStyleReference ? true : nil,
             cachedRemoteURL: fresh,
             cachedRemoteURLExpiresAt: fresh == nil ? nil : cachedRemoteURLExpiresAt,
             generationStatus: generationStatus.manifestValue,

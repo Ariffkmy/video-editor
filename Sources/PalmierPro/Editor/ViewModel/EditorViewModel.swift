@@ -204,6 +204,13 @@ final class EditorViewModel {
         )
         agentService.editor = self
         searchIndex.assetsProvider = { [weak self] in self?.mediaAssets ?? [] }
+        searchIndex.momentTagWriter = { [weak self] asset, tag in
+            guard let self else { return }
+            asset.momentTag = tag
+            if let idx = mediaManifest.entries.firstIndex(where: { $0.id == asset.id }) {
+                mediaManifest.entries[idx].momentTag = tag
+            }
+        }
 
         // Re-check media presence when the app regains focus: a user may have
         // deleted/moved backing files in Finder (or ejected a volume) while we
